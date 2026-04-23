@@ -4,14 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Room;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class RoomController extends Controller
 {
     public function index()
-{
-    $rooms = Room::latest()->get();
-    return view('rooms.index', compact('rooms'));
-}
+    {
+        $rooms = Room::latest()->get();
+        return view('rooms.index', compact('rooms'));
+    }
 
     public function create()
     {
@@ -23,10 +24,17 @@ class RoomController extends Controller
         $request->validate([
             'room_no' => 'required|unique:rooms,room_no',
             'room_type' => 'required|string|max:255',
-            'floor' => 'required|integer|min:1',
-            'price' => 'required|numeric|min:0',
-            'status' => 'required|in:available,reserved,occupied,inactive',
+            'floor' => 'required|string|max:255',
+            'price' => 'required|numeric',
+            'status' => 'required|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
+
+        $imagePath = null;
+
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('rooms', 'public');
+        }
 
         Room::create([
             'room_no' => $request->room_no,
@@ -34,33 +42,37 @@ class RoomController extends Controller
             'floor' => $request->floor,
             'price' => $request->price,
             'status' => $request->status,
+            'image' => $imagePath,
         ]);
 
-        return redirect()->route('rooms.index')->with('success', 'Room added successfully.');
+        return redirect()->route('rooms.index')->with('success', 'Room created successfully.');
     }
 
-    public function show(string $id)
+    public function edit(Room $room)
     {
-        //
-    }
-
-    public function edit(string $id)
-    {
-        $room = Room::findOrFail($id);
         return view('rooms.edit', compact('room'));
     }
 
-    public function update(Request $request, string $id)
+    public function update(Request $request, Room $room)
     {
-        $room = Room::findOrFail($id);
-
         $request->validate([
             'room_no' => 'required|unique:rooms,room_no,' . $room->id,
             'room_type' => 'required|string|max:255',
-            'floor' => 'required|integer|min:1',
-            'price' => 'required|numeric|min:0',
-            'status' => 'required|in:available,reserved,occupied,inactive',
+            'floor' => 'required|string|max:255',
+            'price' => 'required|numeric',
+            'status' => 'required|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
+
+        $imagePath = $room->image;
+
+        if ($request->hasFile('image')) {
+            if ($room->image) {
+                Storage::disk('public')->delete($room->image);
+            }
+
+            $imagePath = $request->file('image')->store('rooms', 'public');
+        }
 
         $room->update([
             'room_no' => $request->room_no,
@@ -68,14 +80,18 @@ class RoomController extends Controller
             'floor' => $request->floor,
             'price' => $request->price,
             'status' => $request->status,
+            'image' => $imagePath,
         ]);
 
         return redirect()->route('rooms.index')->with('success', 'Room updated successfully.');
     }
 
-    public function destroy(string $id)
+    public function destroy(Room $room)
     {
-        $room = Room::findOrFail($id);
+        if ($room->image) {
+            Storage::disk('public')->delete($room->image);
+        }
+
         $room->delete();
 
         return redirect()->route('rooms.index')->with('success', 'Room deleted successfully.');

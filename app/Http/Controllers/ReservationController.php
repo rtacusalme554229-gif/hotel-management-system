@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Guest;
 use App\Models\Reservation;
 use App\Models\Room;
@@ -94,7 +95,7 @@ class ReservationController extends Controller
             ]
         );
 
-        $reservations = Reservation::with('room')
+        $reservations = Reservation::with(['room', 'payment'])
             ->where('guest_id', $guest->id)
             ->latest()
             ->get();
@@ -103,22 +104,42 @@ class ReservationController extends Controller
     }
 
     public function index(Request $request)
-{
-    $query = Reservation::with(['guest.user', 'room'])->latest();
+    {
+        $query = Reservation::with(['guest.user', 'room', 'payment']);
 
-    if ($request->filled('status') && in_array($request->status, ['pending', 'accepted', 'declined'])) {
-        $query->where('status', $request->status);
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('guest.user', function ($guestQuery) use ($search) {
+                    $guestQuery->where('name', 'like', '%' . $search . '%');
+                })->orWhereHas('room', function ($roomQuery) use ($search) {
+                    $roomQuery->where('room_no', 'like', '%' . $search . '%')
+                              ->orWhere('room_type', 'like', '%' . $search . '%');
+                });
+            });
+        }
+
+        if ($request->filled('status') && in_array($request->status, ['pending', 'accepted', 'declined'])) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('check_in_date', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('check_in_date', '<=', $request->end_date);
+        }
+
+        $reservations = $query->latest()->get();
+
+        return view('reservations.index', compact('reservations'));
     }
-
-    $reservations = $query->get();
-    $selectedStatus = $request->status ?? 'all';
-
-    return view('reservations.index', compact('reservations', 'selectedStatus'));
-}
 
     public function approve($id)
     {
-        $reservation = Reservation::with('room')->findOrFail($id);
+        $reservation = Reservation::with(['room', 'guest.user'])->findOrFail($id);
 
         if ($reservation->status !== 'pending') {
             return back()->with('error', 'Only pending reservations can be approved.');
@@ -132,12 +153,18 @@ class ReservationController extends Controller
             'status' => 'reserved',
         ]);
 
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Reservation Approved',
+            'description' => 'Approved reservation #' . $reservation->id . ' for guest ' . ($reservation->guest->user->name ?? 'N/A'),
+        ]);
+
         return back()->with('success', 'Reservation approved.');
     }
 
     public function decline($id)
     {
-        $reservation = Reservation::with('room')->findOrFail($id);
+        $reservation = Reservation::with(['room', 'guest.user'])->findOrFail($id);
 
         if ($reservation->status !== 'pending') {
             return back()->with('error', 'Only pending reservations can be declined.');
@@ -149,6 +176,12 @@ class ReservationController extends Controller
 
         $reservation->room->update([
             'status' => 'available',
+        ]);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Reservation Declined',
+            'description' => 'Declined reservation #' . $reservation->id . ' for guest ' . ($reservation->guest->user->name ?? 'N/A'),
         ]);
 
         return back()->with('success', 'Reservation declined.');

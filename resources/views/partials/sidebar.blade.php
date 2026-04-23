@@ -1,104 +1,174 @@
-<div class="bg-dark text-white p-3 vh-100">
-    <h4 class="mb-4">Menu</h4>
+<div class="text-white d-flex flex-column sidebar"
+     style="width: 270px; min-height: 100vh; background: linear-gradient(180deg, #0f172a 0%, #111827 100%);">
 
-    <ul class="nav flex-column">
+    <style>
+        .sidebar-link {
+            color: rgba(255,255,255,0.75);
+            transition: all 0.2s ease;
+            display: block;
+        }
 
-        @if(auth()->user()->role === 'admin')
-            <li class="nav-item mb-2">
-                <a href="{{ route('admin.dashboard') }}"
-                   class="nav-link text-white {{ request()->routeIs('admin.dashboard') ? 'bg-secondary rounded' : '' }}">
-                    Dashboard
-                </a>
-            </li>
+        .sidebar-link:hover {
+            background: rgba(255,255,255,0.08);
+            color: #ffffff;
+        }
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('guests.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('guests.*') ? 'bg-secondary rounded' : '' }}">
-                    Manage Guests
-                </a>
-            </li>
+        .sidebar-active {
+            background: #ffffff;
+            color: #111827 !important;
+            font-weight: 600;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+        }
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('staff.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('staff.*') ? 'bg-secondary rounded' : '' }}">
-                    Manage Staff
-                </a>
-            </li>
+        .sidebar-title {
+            letter-spacing: 1px;
+        }
+    </style>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('rooms.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('rooms.*') ? 'bg-secondary rounded' : '' }}">
-                    Manage Rooms
-                </a>
-            </li>
+    <div class="px-4 py-4 border-bottom border-secondary-subtle">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width: 46px; height: 46px; background: linear-gradient(135deg, #d4af37, #f5d76e); color: #111827; font-weight: 700;">
+                H
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold text-white">Hotel MS</h5>
+                <small class="text-light opacity-75">Management System</small>
+            </div>
+        </div>
+    </div>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('reservations.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('reservations.*') ? 'bg-secondary rounded' : '' }}">
-                    Manage Reservations
-                </a>
-            </li>
+    <div class="px-3 py-4 flex-grow-1">
+        <small class="text-uppercase text-light opacity-50 fw-semibold px-2 sidebar-title">
+            Navigation
+        </small>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('payments.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('payments.*') ? 'bg-secondary rounded' : '' }}">
-                    Payments
-                </a>
-            </li>
-        @endif
+        <ul class="nav flex-column mt-3">
 
-        @if(in_array(auth()->user()->role, ['staff', 'manager']))
-            <li class="nav-item mb-2">
-                <a href="{{ route('staff.dashboard') }}"
-                   class="nav-link text-white {{ request()->routeIs('staff.dashboard') ? 'bg-secondary rounded' : '' }}">
-                    Dashboard
-                </a>
-            </li>
+            @if(auth()->user()->role === 'admin')
+                <li class="mb-2">
+                    <a href="{{ route('admin.dashboard') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('admin.dashboard') ? 'sidebar-active' : '' }}">
+                        Dashboard
+                    </a>
+                </li>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('rooms.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('rooms.*') ? 'bg-secondary rounded' : '' }}">
-                    Rooms
-                </a>
-            </li>
+                <li class="mb-2">
+                    <a href="{{ route('guests.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('guests.*') ? 'sidebar-active' : '' }}">
+                        Manage Guests
+                    </a>
+                </li>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('reservations.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('reservations.*') ? 'bg-secondary rounded' : '' }}">
-                    Manage Reservations
-                </a>
-            </li>
+                <li class="mb-2">
+                    <a href="{{ route('staff.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('staff.*') ? 'sidebar-active' : '' }}">
+                        Manage Staff
+                    </a>
+                </li>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('payments.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('payments.*') ? 'bg-secondary rounded' : '' }}">
-                    Payments
-                </a>
-            </li>
-        @endif
+                <li class="mb-2">
+                    <a href="{{ route('rooms.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('rooms.*') ? 'sidebar-active' : '' }}">
+                        Manage Rooms
+                    </a>
+                </li>
 
-        @if(auth()->user()->role === 'guest')
-            <li class="nav-item mb-2">
-                <a href="{{ route('guest.dashboard') }}"
-                   class="nav-link text-white {{ request()->routeIs('guest.dashboard') ? 'bg-secondary rounded' : '' }}">
-                    Dashboard
-                </a>
-            </li>
+                <li class="mb-2">
+                    <a href="{{ route('reservations.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('reservations.*') ? 'sidebar-active' : '' }}">
+                        Reservations
+                    </a>
+                </li>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('rooms.index') }}"
-                   class="nav-link text-white {{ request()->routeIs('rooms.*') ? 'bg-secondary rounded' : '' }}">
-                    Available Rooms
-                </a>
-            </li>
+                <li class="mb-2">
+                    <a href="{{ route('payments.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('payments.*') ? 'sidebar-active' : '' }}">
+                        Payments
+                    </a>
+                </li>
 
-            <li class="nav-item mb-2">
-                <a href="{{ route('my.reservations') }}"
-                   class="nav-link text-white {{ request()->routeIs('my.reservations') ? 'bg-secondary rounded' : '' }}">
-                    My Reservations
-                </a>
-            </li>
-        @endif
+                <li class="mb-2">
+                    <a href="{{ route('reports.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('reports.*') ? 'sidebar-active' : '' }}">
+                        Reports
+                    </a>
+                </li>
+            @endif
 
-    </ul>
+            @if(in_array(auth()->user()->role, ['staff', 'manager']))
+                <li class="mb-2">
+                    <a href="{{ route('staff.dashboard') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('staff.dashboard') ? 'sidebar-active' : '' }}">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('rooms.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('rooms.*') ? 'sidebar-active' : '' }}">
+                        Rooms
+                    </a>
+                </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('reservations.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('reservations.*') ? 'sidebar-active' : '' }}">
+                        Reservations
+                    </a>
+                </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('payments.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('payments.*') ? 'sidebar-active' : '' }}">
+                        Payments
+                    </a>
+                </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('reports.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('reports.*') ? 'sidebar-active' : '' }}">
+                        Reports
+                    </a>
+                </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('activity-logs.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('activity-logs.*') ? 'sidebar-active' : '' }}">
+                        Activity Logs
+                    </a>
+                </li>
+            @endif
+
+            @if(auth()->user()->role === 'guest')
+                <li class="mb-2">
+                    <a href="{{ route('guest.dashboard') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('guest.dashboard') ? 'sidebar-active' : '' }}">
+                        Dashboard
+                    </a>
+                </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('rooms.index') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('rooms.*') ? 'sidebar-active' : '' }}">
+                        Available Rooms
+                    </a>
+                </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('my.reservations') }}"
+                       class="nav-link sidebar-link rounded-3 px-3 py-2 {{ request()->routeIs('my.reservations') ? 'sidebar-active' : '' }}">
+                        My Reservations
+                    </a>
+                </li>
+            @endif
+
+        </ul>
+    </div>
+
+    <div class="px-4 py-3 border-top border-secondary-subtle">
+        <small class="text-light opacity-50">
+            Business Dashboard UI
+        </small>
+    </div>
 </div>

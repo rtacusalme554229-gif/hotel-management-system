@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\StaffController;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -77,25 +80,32 @@ Route::middleware(['auth', 'admin'])->group(function () {
 */
 Route::middleware(['auth', 'staff'])->group(function () {
     Route::get('/staff/dashboard', function () {
+        $today = Carbon::today();
+
         $totalRooms = \App\Models\Room::count();
         $availableRooms = \App\Models\Room::where('status', 'available')->count();
         $totalReservations = \App\Models\Reservation::count();
-        $totalPayments = \App\Models\Payment::count();
-        $totalRevenue = \App\Models\Payment::sum('amount');
+
+        $todayReservations = \App\Models\Reservation::whereDate('created_at', $today)->count();
+        $pendingReservations = \App\Models\Reservation::where('status', 'pending')->count();
+        $todayPayments = \App\Models\Payment::whereDate('created_at', $today)->count();
+        $todayRevenue = \App\Models\Payment::whereDate('created_at', $today)->sum('amount');
 
         return view('staff.dashboard', compact(
             'totalRooms',
             'availableRooms',
             'totalReservations',
-            'totalPayments',
-            'totalRevenue'
+            'todayReservations',
+            'pendingReservations',
+            'todayPayments',
+            'todayRevenue'
         ));
     })->name('staff.dashboard');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Reservation Management for Admin + Staff/Manager
+| Reservation Management for Admin + Staff / Manager
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
@@ -132,7 +142,7 @@ Route::middleware(['auth'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Payments for Admin + Staff/Manager
+| Payments for Admin + Staff / Manager
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
@@ -145,6 +155,33 @@ Route::middleware(['auth'])->group(function () {
 
         return app(PaymentController::class)->index();
     })->name('payments.index');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reports for Admin + Staff / Manager
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->group(function () {
+    Route::get('/reports', function () {
+        $user = Auth::user();
+
+        if (! $user || ! in_array(trim($user->role), ['admin', 'staff', 'manager'])) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        return app(ReportController::class)->index();
+    })->name('reports.index');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Activity Logs for Staff / Manager only
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'staff'])->group(function () {
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])
+        ->name('activity-logs.index');
 });
 
 /*
@@ -163,7 +200,6 @@ Route::middleware(['auth', 'guest.role'])->group(function () {
         );
 
         $totalReservations = \App\Models\Reservation::where('guest_id', $guest->id)->count();
-
         $approvedReservations = \App\Models\Reservation::where('guest_id', $guest->id)
             ->where('status', 'accepted')
             ->count();
@@ -189,7 +225,9 @@ Route::middleware(['auth', 'guest.role'])->group(function () {
     Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');
     Route::get('/my-reservations', [ReservationController::class, 'myReservations'])->name('my.reservations');
 
+    Route::get('/pay/{id}', [PaymentController::class, 'show'])->name('payments.show');
     Route::post('/pay/{id}', [PaymentController::class, 'pay'])->name('payments.pay');
+    Route::get('/payment-receipt/{id}', [PaymentController::class, 'receipt'])->name('payments.receipt');
 });
 
 /*
