@@ -44,13 +44,25 @@ Route::middleware(['auth', 'admin'])->group(function () {
         $totalPayments = \App\Models\Payment::count();
         $totalRevenue = \App\Models\Payment::sum('amount');
 
+        $recentPayments = \App\Models\Payment::with(['reservation.guest.user', 'reservation.room'])
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $recentReservations = \App\Models\Reservation::with(['guest.user', 'room', 'payment'])
+            ->latest()
+            ->take(5)
+            ->get();
+
         return view('admin.dashboard', compact(
             'totalRooms',
             'availableRooms',
             'totalGuests',
             'totalReservations',
             'totalPayments',
-            'totalRevenue'
+            'totalRevenue',
+            'recentPayments',
+            'recentReservations'
         ));
     })->name('admin.dashboard');
 
@@ -84,23 +96,36 @@ Route::middleware(['auth', 'staff'])->group(function () {
 
         $totalRooms = \App\Models\Room::count();
         $availableRooms = \App\Models\Room::where('status', 'available')->count();
-        $totalReservations = \App\Models\Reservation::count();
+        $occupiedRooms = \App\Models\Room::where('status', 'occupied')->count();
+        $reservedRooms = \App\Models\Room::where('status', 'reserved')->count();
 
+        $totalReservations = \App\Models\Reservation::count();
         $todayReservations = \App\Models\Reservation::whereDate('created_at', $today)->count();
         $pendingReservations = \App\Models\Reservation::where('status', 'pending')->count();
+
+        $todayCheckIns = \App\Models\Reservation::whereDate('checked_in_at', $today)->count();
+        $todayCheckOuts = \App\Models\Reservation::whereDate('checked_out_at', $today)->count();
+
         $todayPayments = \App\Models\Payment::whereDate('created_at', $today)->count();
         $todayRevenue = \App\Models\Payment::whereDate('created_at', $today)->sum('amount');
 
         return view('staff.dashboard', compact(
             'totalRooms',
             'availableRooms',
+            'occupiedRooms',
+            'reservedRooms',
             'totalReservations',
             'todayReservations',
             'pendingReservations',
+            'todayCheckIns',
+            'todayCheckOuts',
             'todayPayments',
             'todayRevenue'
         ));
     })->name('staff.dashboard');
+
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])
+        ->name('activity-logs.index');
 });
 
 /*
@@ -122,8 +147,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/reservations/{id}/approve', function ($id) {
         $user = Auth::user();
 
-        if (! $user || ! in_array(trim($user->role), ['admin', 'staff', 'manager'])) {
-            abort(403, 'Unauthorized access.');
+        if (! $user || trim($user->role) !== 'admin') {
+            abort(403, 'Only admin can approve reservations.');
         }
 
         return app(ReservationController::class)->approve($id);
@@ -132,12 +157,32 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/reservations/{id}/decline', function ($id) {
         $user = Auth::user();
 
-        if (! $user || ! in_array(trim($user->role), ['admin', 'staff', 'manager'])) {
-            abort(403, 'Unauthorized access.');
+        if (! $user || trim($user->role) !== 'admin') {
+            abort(403, 'Only admin can decline reservations.');
         }
 
         return app(ReservationController::class)->decline($id);
     })->name('reservations.decline');
+
+    Route::post('/reservations/{id}/check-in', function ($id) {
+        $user = Auth::user();
+
+        if (! $user || ! in_array(trim($user->role), ['staff', 'manager'])) {
+            abort(403, 'Only staff can check in guests.');
+        }
+
+        return app(ReservationController::class)->checkIn($id);
+    })->name('reservations.checkin');
+
+    Route::post('/reservations/{id}/check-out', function ($id) {
+        $user = Auth::user();
+
+        if (! $user || ! in_array(trim($user->role), ['staff', 'manager'])) {
+            abort(403, 'Only staff can check out guests.');
+        }
+
+        return app(ReservationController::class)->checkOut($id);
+    })->name('reservations.checkout');
 });
 
 /*
@@ -163,25 +208,25 @@ Route::middleware(['auth'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
-    Route::get('/reports', function () {
+    Route::get('/reports', function (Request $request) {
         $user = Auth::user();
 
         if (! $user || ! in_array(trim($user->role), ['admin', 'staff', 'manager'])) {
             abort(403, 'Unauthorized access.');
         }
 
-        return app(ReportController::class)->index();
+        return app(ReportController::class)->index($request);
     })->name('reports.index');
-});
 
-/*
-|--------------------------------------------------------------------------
-| Activity Logs for Staff / Manager only
-|--------------------------------------------------------------------------
-*/
-Route::middleware(['auth', 'staff'])->group(function () {
-    Route::get('/activity-logs', [ActivityLogController::class, 'index'])
-        ->name('activity-logs.index');
+    Route::get('/reports/download', function (Request $request) {
+        $user = Auth::user();
+
+        if (! $user || ! in_array(trim($user->role), ['admin', 'staff', 'manager'])) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        return app(ReportController::class)->download($request);
+    })->name('reports.download');
 });
 
 /*
@@ -200,6 +245,7 @@ Route::middleware(['auth', 'guest.role'])->group(function () {
         );
 
         $totalReservations = \App\Models\Reservation::where('guest_id', $guest->id)->count();
+
         $approvedReservations = \App\Models\Reservation::where('guest_id', $guest->id)
             ->where('status', 'accepted')
             ->count();
@@ -221,13 +267,23 @@ Route::middleware(['auth', 'guest.role'])->group(function () {
         ));
     })->name('guest.dashboard');
 
-    Route::get('/reserve/{room}', [ReservationController::class, 'create'])->name('reservations.create');
-    Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');
-    Route::get('/my-reservations', [ReservationController::class, 'myReservations'])->name('my.reservations');
+    Route::get('/reserve/{room}', [ReservationController::class, 'create'])
+        ->name('reservations.create');
 
-    Route::get('/pay/{id}', [PaymentController::class, 'show'])->name('payments.show');
-    Route::post('/pay/{id}', [PaymentController::class, 'pay'])->name('payments.pay');
-    Route::get('/payment-receipt/{id}', [PaymentController::class, 'receipt'])->name('payments.receipt');
+    Route::post('/reservations', [ReservationController::class, 'store'])
+        ->name('reservations.store');
+
+    Route::get('/my-reservations', [ReservationController::class, 'myReservations'])
+        ->name('my.reservations');
+
+    Route::get('/pay/{id}', [PaymentController::class, 'show'])
+        ->name('payments.show');
+
+    Route::post('/pay/{id}', [PaymentController::class, 'pay'])
+        ->name('payments.pay');
+
+    Route::get('/payment-receipt/{id}', [PaymentController::class, 'receipt'])
+        ->name('payments.receipt');
 });
 
 /*
@@ -236,7 +292,8 @@ Route::middleware(['auth', 'guest.role'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
-    Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
+    Route::get('/rooms', [RoomController::class, 'index'])
+        ->name('rooms.index');
 
     Route::get('/check-user', function () {
         return Auth::user();

@@ -25,8 +25,7 @@ class RoomController extends Controller
             'room_no' => 'required|unique:rooms,room_no',
             'room_type' => 'required|string|max:255',
             'floor' => 'required|string|max:255',
-            'price' => 'required|numeric',
-            'status' => 'required|string',
+            'price' => 'required|numeric|min:0',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
@@ -41,7 +40,7 @@ class RoomController extends Controller
             'room_type' => $request->room_type,
             'floor' => $request->floor,
             'price' => $request->price,
-            'status' => $request->status,
+            'status' => 'available',
             'image' => $imagePath,
         ]);
 
@@ -59,8 +58,7 @@ class RoomController extends Controller
             'room_no' => 'required|unique:rooms,room_no,' . $room->id,
             'room_type' => 'required|string|max:255',
             'floor' => 'required|string|max:255',
-            'price' => 'required|numeric',
-            'status' => 'required|string',
+            'price' => 'required|numeric|min:0',
             'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
@@ -79,7 +77,6 @@ class RoomController extends Controller
             'room_type' => $request->room_type,
             'floor' => $request->floor,
             'price' => $request->price,
-            'status' => $request->status,
             'image' => $imagePath,
         ]);
 

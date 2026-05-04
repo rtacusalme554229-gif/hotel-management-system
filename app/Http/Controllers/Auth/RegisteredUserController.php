@@ -15,43 +15,38 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): View
     {
         return view('auth.register');
     }
 
-    /**
-     * Handle an incoming registration request.
-     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
+            'phone_number' => ['required', 'string', 'max:20'],
+            'address' => ['required', 'string', 'max:500'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
             'role' => 'guest',
-            'status' => 'active',
+            'password' => Hash::make($request->password),
         ]);
 
         Guest::create([
             'user_id' => $user->id,
-            'phone_number' => null,
-            'address' => null,
+            'phone_number' => $request->phone_number,
+            'address' => $request->address,
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect()->route('dashboard');
+        return redirect(route('dashboard', absolute: false));
     }
 }

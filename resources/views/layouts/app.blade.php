@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Management System</title>
+
+    <title>StayEase Hotel</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -86,6 +88,11 @@
         .icon-yellow { background: linear-gradient(135deg, #f59e0b, #d97706); }
         .icon-gray { background: linear-gradient(135deg, #6b7280, #4b5563); }
         .icon-dark { background: linear-gradient(135deg, #111827, #1f2937); }
+
+        .currency {
+            font-family: Arial, sans-serif;
+            font-weight: inherit;
+        }
     </style>
 </head>
 <body>
@@ -108,5 +115,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+@stack('scripts')
+
 </body>
 </html>

@@ -32,7 +32,7 @@
                 H
             </div>
             <div>
-                <h5 class="mb-0 fw-bold text-white">Hotel MS</h5>
+                <h5 class="mb-0 fw-bold text-white">StayEase Hotel</h5>
                 <small class="text-light opacity-75">Management System</small>
             </div>
         </div>

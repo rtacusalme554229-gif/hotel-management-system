@@ -18,22 +18,35 @@
                     <th>Total Amount</th>
                     <th>Special Request</th>
                     <th>Reservation Status</th>
-                    <th>Payment</th>
+                    <th>Payment Status</th>
                 </tr>
             </thead>
+
             <tbody>
                 @forelse($reservations as $reservation)
                     <tr>
                         <td class="text-center">{{ $reservation->id }}</td>
 
                         <td>
-                            <strong>Room {{ $reservation->room->room_no }}</strong><br>
-                            <small class="text-muted">{{ $reservation->room->room_type }}</small>
+                            <strong>Room {{ $reservation->room->room_no ?? 'N/A' }}</strong><br>
+                            <small class="text-muted">{{ $reservation->room->room_type ?? '' }}</small>
                         </td>
 
                         <td>
                             <strong>Check In:</strong> {{ $reservation->check_in_date }}<br>
                             <strong>Check Out:</strong> {{ $reservation->check_out_date }}
+
+                            @if($reservation->checked_in_at)
+                                <br><small class="text-primary">
+                                    Checked in: {{ $reservation->checked_in_at->format('Y-m-d h:i A') }}
+                                </small>
+                            @endif
+
+                            @if($reservation->checked_out_at)
+                                <br><small class="text-secondary">
+                                    Checked out: {{ $reservation->checked_out_at->format('Y-m-d h:i A') }}
+                                </small>
+                            @endif
                         </td>
 
                         <td class="text-center">{{ $reservation->number_of_guests }}</td>
@@ -56,30 +69,36 @@
                             <span class="badge
                                 @if($reservation->status === 'pending') bg-warning text-dark
                                 @elseif($reservation->status === 'accepted') bg-success
+                                @elseif($reservation->status === 'checked_in') bg-primary
+                                @elseif($reservation->status === 'checked_out') bg-secondary
                                 @elseif($reservation->status === 'declined') bg-danger
                                 @else bg-secondary
                                 @endif">
-                                {{ ucfirst($reservation->status) }}
+                                {{ ucfirst(str_replace('_', ' ', $reservation->status)) }}
                             </span>
                         </td>
 
                         <td class="text-center">
-                            @if($reservation->status === 'accepted')
-                                @if(!$reservation->payment)
-                                    <a href="{{ route('payments.show', $reservation->id) }}" class="btn btn-primary btn-sm rounded-3">
-                                        Pay
+                            @if($reservation->payment)
+                                <div class="d-flex flex-column gap-2 align-items-center">
+                                    <span class="badge bg-success">Paid</span>
+
+                                    <a href="{{ route('payments.receipt', $reservation->payment->id) }}"
+                                       class="btn btn-outline-dark btn-sm rounded-3">
+                                        View Receipt
                                     </a>
-                                @else
-                                    <div class="d-flex flex-column gap-2 align-items-center">
-                                        <span class="badge bg-success">Paid</span>
-                                        <a href="{{ route('payments.receipt', $reservation->payment->id) }}"
-                                           class="btn btn-outline-dark btn-sm rounded-3">
-                                            View Receipt
-                                        </a>
-                                    </div>
-                                @endif
+                                </div>
+                            @elseif($reservation->status === 'accepted')
+                                <a href="{{ route('payments.show', $reservation->id) }}"
+                                   class="btn btn-primary btn-sm rounded-3">
+                                    Pay Now
+                                </a>
+                            @elseif($reservation->status === 'pending')
+                                <span class="badge bg-warning text-dark">Waiting Approval</span>
+                            @elseif($reservation->status === 'declined')
+                                <span class="badge bg-danger">Declined</span>
                             @else
-                                <span class="text-muted">N/A</span>
+                                <span class="badge bg-warning text-dark">Unpaid</span>
                             @endif
                         </td>
                     </tr>

@@ -2,69 +2,71 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Guest;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\Room;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $totalRooms = Room::count();
-        $availableRooms = Room::where('status', 'available')->count();
-        $reservedRooms = Room::where('status', 'reserved')->count();
-        $occupiedRooms = Room::where('status', 'occupied')->count();
+        $data = $this->getReportData($request);
 
-        $totalGuests = Guest::count();
+        return view('reports.index', compact('data'));
+    }
 
-        $totalReservations = Reservation::count();
-        $pendingReservations = Reservation::where('status', 'pending')->count();
-        $acceptedReservations = Reservation::where('status', 'accepted')->count();
-        $declinedReservations = Reservation::where('status', 'declined')->count();
+    public function download(Request $request)
+    {
+        $data = $this->getReportData($request);
 
-        $totalPayments = Payment::count();
-        $totalRevenue = Payment::sum('amount');
+        $pdf = Pdf::loadView('reports.pdf', compact('data'))
+            ->setPaper('a4', 'portrait');
 
-        $revenueData = Payment::select(
-            DB::raw('DATE(payment_date) as date'),
-            DB::raw('SUM(amount) as total')
-        )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+        return $pdf->download('hotel-management-report.pdf');
+    }
 
-        $revenueLabels = $revenueData->pluck('date');
-        $revenueValues = $revenueData->pluck('total');
+    private function getReportData(Request $request)
+    {
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
 
-        $reservationData = Reservation::select(
-            DB::raw('DATE(reservation_date) as date'),
-            DB::raw('COUNT(*) as total')
-        )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+        $reservationQuery = Reservation::query();
+        $paymentQuery = Payment::query();
 
-        $reservationLabels = $reservationData->pluck('date');
-        $reservationValues = $reservationData->pluck('total');
+        if ($startDate && $endDate) {
+            $reservationQuery->whereBetween('created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay(),
+            ]);
 
-        return view('reports.index', compact(
-            'totalRooms',
-            'availableRooms',
-            'reservedRooms',
-            'occupiedRooms',
-            'totalGuests',
-            'totalReservations',
-            'pendingReservations',
-            'acceptedReservations',
-            'declinedReservations',
-            'totalPayments',
-            'totalRevenue',
-            'revenueLabels',
-            'revenueValues',
-            'reservationLabels',
-            'reservationValues'
-        ));
+            $paymentQuery->whereBetween('created_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay(),
+            ]);
+        }
+
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'generatedAt' => Carbon::now()->format('F d, Y h:i A'),
+
+            'totalRooms' => Room::count(),
+            'availableRooms' => Room::where('status', 'available')->count(),
+            'reservedRooms' => Room::where('status', 'reserved')->count(),
+            'occupiedRooms' => Room::where('status', 'occupied')->count(),
+
+            'totalReservations' => (clone $reservationQuery)->count(),
+            'pendingReservations' => (clone $reservationQuery)->where('status', 'pending')->count(),
+            'acceptedReservations' => (clone $reservationQuery)->where('status', 'accepted')->count(),
+            'checkedInReservations' => (clone $reservationQuery)->where('status', 'checked_in')->count(),
+            'checkedOutReservations' => (clone $reservationQuery)->where('status', 'checked_out')->count(),
+            'declinedReservations' => (clone $reservationQuery)->where('status', 'declined')->count(),
+
+            'totalPayments' => (clone $paymentQuery)->count(),
+            'totalRevenue' => (clone $paymentQuery)->sum('amount'),
+        ];
     }
 }

@@ -2,19 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
-use App\Models\Guest;
 use App\Models\Reservation;
 use App\Models\Room;
+use App\Models\Guest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class ReservationController extends Controller
 {
-    public function create($roomId)
+    public function create(Room $room)
     {
-        $room = Room::where('status', 'available')->findOrFail($roomId);
-
         return view('reservations.create', compact('room'));
     }
 
@@ -25,125 +23,52 @@ class ReservationController extends Controller
             'check_in_date' => 'required|date',
             'check_out_date' => 'required|date|after:check_in_date',
             'number_of_guests' => 'required|integer|min:1',
-            'special_requests' => 'nullable|string',
+            'special_requests' => 'nullable|string|max:255',
         ]);
 
-        $guest = Guest::firstOrCreate(
-            ['user_id' => Auth::id()],
-            [
-                'phone_number' => null,
-                'address' => null,
-            ]
-        );
+        $guest = Guest::where('user_id', Auth::id())->first();
+
+        if (!$guest) {
+            return back()->with('error', 'Guest profile not found.');
+        }
 
         $room = Room::findOrFail($request->room_id);
 
-        if ($room->status !== 'available') {
-            return back()->withErrors([
-                'room_id' => 'This room is not available for reservation.',
-            ])->withInput();
-        }
+        $days = Carbon::parse($request->check_in_date)
+            ->diffInDays(Carbon::parse($request->check_out_date));
 
-        $hasConflict = Reservation::where('room_id', $room->id)
-            ->whereIn('status', ['pending', 'accepted'])
-            ->where(function ($query) use ($request) {
-                $query->whereBetween('check_in_date', [$request->check_in_date, $request->check_out_date])
-                    ->orWhereBetween('check_out_date', [$request->check_in_date, $request->check_out_date])
-                    ->orWhere(function ($q) use ($request) {
-                        $q->where('check_in_date', '<=', $request->check_in_date)
-                          ->where('check_out_date', '>=', $request->check_out_date);
-                    });
-            })
-            ->exists();
+        $totalAmount = $days * $room->price;
 
-        if ($hasConflict) {
-            return back()->withErrors([
-                'room_id' => 'This room is already reserved for the selected dates.',
-            ])->withInput();
-        }
-
-        $days = max(
-            1,
-            \Carbon\Carbon::parse($request->check_in_date)
-                ->diffInDays(\Carbon\Carbon::parse($request->check_out_date))
-        );
-
-        $totalAmount = $room->price * $days;
-
+        // ✅ ONLY CREATE RESERVATION (NO ROOM STATUS CHANGE YET)
         Reservation::create([
             'guest_id' => $guest->id,
             'room_id' => $room->id,
+            'reservation_date' => Carbon::now('Asia/Manila')->toDateString(),
             'check_in_date' => $request->check_in_date,
             'check_out_date' => $request->check_out_date,
-            'reservation_date' => now()->toDateString(),
             'number_of_guests' => $request->number_of_guests,
             'special_requests' => $request->special_requests,
             'total_amount' => $totalAmount,
             'status' => 'pending',
         ]);
 
-        return redirect()->route('my.reservations')->with('success', 'Reservation submitted successfully.');
+        return redirect()->route('my.reservations')
+            ->with('success', 'Reservation submitted successfully.');
     }
 
-    public function myReservations()
+    public function index()
     {
-        $guest = Guest::firstOrCreate(
-            ['user_id' => Auth::id()],
-            [
-                'phone_number' => null,
-                'address' => null,
-            ]
-        );
-
-        $reservations = Reservation::with(['room', 'payment'])
-            ->where('guest_id', $guest->id)
+        $reservations = Reservation::with(['guest.user', 'room', 'payment'])
             ->latest()
             ->get();
-
-        return view('reservations.my', compact('reservations'));
-    }
-
-    public function index(Request $request)
-    {
-        $query = Reservation::with(['guest.user', 'room', 'payment']);
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('guest.user', function ($guestQuery) use ($search) {
-                    $guestQuery->where('name', 'like', '%' . $search . '%');
-                })->orWhereHas('room', function ($roomQuery) use ($search) {
-                    $roomQuery->where('room_no', 'like', '%' . $search . '%')
-                              ->orWhere('room_type', 'like', '%' . $search . '%');
-                });
-            });
-        }
-
-        if ($request->filled('status') && in_array($request->status, ['pending', 'accepted', 'declined'])) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('start_date')) {
-            $query->whereDate('check_in_date', '>=', $request->start_date);
-        }
-
-        if ($request->filled('end_date')) {
-            $query->whereDate('check_in_date', '<=', $request->end_date);
-        }
-
-        $reservations = $query->latest()->get();
 
         return view('reservations.index', compact('reservations'));
     }
 
+    // ✅ ADMIN APPROVE → ROOM BECOMES RESERVED
     public function approve($id)
     {
-        $reservation = Reservation::with(['room', 'guest.user'])->findOrFail($id);
-
-        if ($reservation->status !== 'pending') {
-            return back()->with('error', 'Only pending reservations can be approved.');
-        }
+        $reservation = Reservation::with('room')->findOrFail($id);
 
         $reservation->update([
             'status' => 'accepted',
@@ -153,22 +78,13 @@ class ReservationController extends Controller
             'status' => 'reserved',
         ]);
 
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'Reservation Approved',
-            'description' => 'Approved reservation #' . $reservation->id . ' for guest ' . ($reservation->guest->user->name ?? 'N/A'),
-        ]);
-
-        return back()->with('success', 'Reservation approved.');
+        return back()->with('success', 'Reservation approved and room reserved.');
     }
 
+    // ❌ DECLINE → ROOM BACK TO AVAILABLE
     public function decline($id)
     {
-        $reservation = Reservation::with(['room', 'guest.user'])->findOrFail($id);
-
-        if ($reservation->status !== 'pending') {
-            return back()->with('error', 'Only pending reservations can be declined.');
-        }
+        $reservation = Reservation::with('room')->findOrFail($id);
 
         $reservation->update([
             'status' => 'declined',
@@ -178,12 +94,70 @@ class ReservationController extends Controller
             'status' => 'available',
         ]);
 
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'Reservation Declined',
-            'description' => 'Declined reservation #' . $reservation->id . ' for guest ' . ($reservation->guest->user->name ?? 'N/A'),
+        return back()->with('success', 'Reservation declined.');
+    }
+
+    // 🏨 CHECK-IN → ROOM OCCUPIED
+    public function checkIn($id)
+    {
+        $reservation = Reservation::with('room', 'payment')->findOrFail($id);
+
+        if (!$reservation->payment) {
+            return back()->with('error', 'Guest must pay before check-in.');
+        }
+
+        if ($reservation->status !== 'accepted') {
+            return back()->with('error', 'Only accepted reservations can be checked in.');
+        }
+
+        $reservation->update([
+            'status' => 'checked_in',
+            'checked_in_at' => Carbon::now('Asia/Manila'),
         ]);
 
-        return back()->with('success', 'Reservation declined.');
+        $reservation->room->update([
+            'status' => 'occupied',
+        ]);
+
+        return back()->with('success', 'Guest checked in successfully.');
+    }
+
+    // 🏁 CHECK-OUT → ROOM AVAILABLE
+    public function checkOut($id)
+    {
+        $reservation = Reservation::with('room')->findOrFail($id);
+
+        if ($reservation->status !== 'checked_in') {
+            return back()->with('error', 'Only checked-in guests can be checked out.');
+        }
+
+        $now = Carbon::now('Asia/Manila');
+
+        $reservation->update([
+            'status' => 'checked_out',
+            'checked_out_at' => $now,
+        ]);
+
+        $reservation->room->update([
+            'status' => 'available',
+        ]);
+
+        return back()->with('success', 'Guest checked out successfully.');
+    }
+
+    public function myReservations()
+    {
+        $guest = Guest::where('user_id', Auth::id())->first();
+
+        if (!$guest) {
+            return back()->with('error', 'Guest not found.');
+        }
+
+        $reservations = Reservation::with(['room', 'payment'])
+            ->where('guest_id', $guest->id)
+            ->latest()
+            ->get();
+
+        return view('reservations.my', compact('reservations'));
     }
 }

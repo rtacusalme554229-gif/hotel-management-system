@@ -10,15 +10,23 @@ class Reservation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'guest_id',
-        'room_id',
-        'check_in_date',
-        'check_out_date',
-        'reservation_date',
-        'number_of_guests',
-        'special_requests',
-        'total_amount',
-        'status',
+    'guest_id',
+    'room_id',
+    'reservation_date', 
+    'check_in_date',
+    'check_out_date',
+    'number_of_guests',
+    'special_requests',
+    'total_amount',
+    'status',
+    'checked_in_at',
+    'checked_out_at',
+    'late_fee',
+    ];
+
+    protected $casts = [
+        'checked_in_at' => 'datetime',
+        'checked_out_at' => 'datetime',
     ];
 
     public function guest()

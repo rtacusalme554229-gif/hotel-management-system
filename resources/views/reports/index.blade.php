@@ -2,163 +2,184 @@
 
 @section('content')
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="fw-bold text-dark mb-1">Reports Dashboard</h2>
+        <p class="text-muted mb-0">Business overview of hotel operations, reservations, and revenue.</p>
+    </div>
 
-<div class="mb-4">
-    <h2 class="fw-bold text-dark mb-1">Reports Dashboard</h2>
-    <p class="text-muted mb-0">Overview of system performance and operations</p>
+    <a href="{{ route('reports.download', request()->query()) }}" class="btn btn-dark rounded-3 px-4 shadow-sm">
+        <i class="bi bi-file-earmark-pdf me-2"></i> Download PDF
+    </a>
 </div>
 
-<div class="row g-4">
+<div class="card border-0 rounded-4 shadow-sm mb-4">
+    <div class="card-body p-4">
+        <form method="GET" action="{{ route('reports.index') }}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted">Start Date</label>
+                    <input type="date" name="start_date" class="form-control rounded-3" value="{{ request('start_date') }}">
+                </div>
 
-    <!-- ROOMS -->
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-muted">End Date</label>
+                    <input type="date" name="end_date" class="form-control rounded-3" value="{{ request('end_date') }}">
+                </div>
+
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark rounded-3 flex-fill">
+                        Filter Report
+                    </button>
+
+                    <a href="{{ route('reports.index') }}" class="btn btn-outline-secondary rounded-3 flex-fill">
+                        Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if($data['startDate'] && $data['endDate'])
+    <div class="alert alert-info border-0 rounded-4 shadow-sm mb-4">
+        Showing report from
+        <strong>{{ $data['startDate'] }}</strong>
+        to
+        <strong>{{ $data['endDate'] }}</strong>.
+    </div>
+@endif
+
+<div class="row g-4 mb-4">
+
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card dashboard-card">
             <div class="card-body p-4">
-                <small class="text-muted fw-semibold text-uppercase">Rooms</small>
-                <h3 class="fw-bold mt-2">{{ $totalRooms }}</h3>
-                <div class="mt-3 small text-muted">
-                    Available: <strong>{{ $availableRooms }}</strong><br>
-                    Reserved: <strong>{{ $reservedRooms }}</strong><br>
-                    Occupied: <strong>{{ $occupiedRooms }}</strong>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="card-label">Total Rooms</p>
+                        <h3 class="card-value">{{ $data['totalRooms'] }}</h3>
+                        <p class="card-subtext">Registered hotel rooms</p>
+                    </div>
+                    <div class="dashboard-icon icon-blue">
+                        <i class="bi bi-building"></i>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">Available</span>
+                    <strong>{{ $data['availableRooms'] }}</strong>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">Reserved</span>
+                    <strong>{{ $data['reservedRooms'] }}</strong>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">Occupied</span>
+                    <strong>{{ $data['occupiedRooms'] }}</strong>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- GUESTS -->
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card dashboard-card">
             <div class="card-body p-4">
-                <small class="text-muted fw-semibold text-uppercase">Guests</small>
-                <h3 class="fw-bold mt-2">{{ $totalGuests }}</h3>
-                <p class="text-muted mt-3 mb-0">Total registered users</p>
-            </div>
-        </div>
-    </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="card-label">Reservations</p>
+                        <h3 class="card-value">{{ $data['totalReservations'] }}</h3>
+                        <p class="card-subtext">Reservation records</p>
+                    </div>
+                    <div class="dashboard-icon icon-yellow">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                </div>
 
-    <!-- RESERVATIONS -->
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body p-4">
-                <small class="text-muted fw-semibold text-uppercase">Reservations</small>
-                <h3 class="fw-bold mt-2">{{ $totalReservations }}</h3>
+                <hr>
 
-                <div class="d-flex gap-2 mt-3 flex-wrap">
-                    <span class="badge bg-warning text-dark px-3 py-2">
-                        Pending: {{ $pendingReservations }}
-                    </span>
-                    <span class="badge bg-success px-3 py-2">
-                        Accepted: {{ $acceptedReservations }}
-                    </span>
-                    <span class="badge bg-danger px-3 py-2">
-                        Declined: {{ $declinedReservations }}
-                    </span>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-warning text-dark">Pending: {{ $data['pendingReservations'] }}</span>
+                    <span class="badge bg-success">Accepted: {{ $data['acceptedReservations'] }}</span>
+                    <span class="badge bg-primary">Checked In: {{ $data['checkedInReservations'] }}</span>
+                    <span class="badge bg-secondary">Checked Out: {{ $data['checkedOutReservations'] }}</span>
+                    <span class="badge bg-danger">Declined: {{ $data['declinedReservations'] }}</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- PAYMENTS -->
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
+    <div class="col-md-4">
+        <div class="card dashboard-card">
             <div class="card-body p-4">
-                <small class="text-muted fw-semibold text-uppercase">Payments</small>
-                <h3 class="fw-bold mt-2">{{ $totalPayments }}</h3>
-                <p class="text-muted mt-3 mb-0">Completed transactions</p>
-            </div>
-        </div>
-    </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="card-label">Revenue</p>
+                        <h3 class="card-value text-success">₱{{ number_format($data['totalRevenue'], 2) }}</h3>
+                        <p class="card-subtext">{{ $data['totalPayments'] }} payment transaction(s)</p>
+                    </div>
+                    <div class="dashboard-icon icon-dark">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                </div>
 
-    <!-- REVENUE -->
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body p-4">
-                <small class="text-muted fw-semibold text-uppercase">Revenue</small>
-                <h3 class="fw-bold mt-2 text-success">
-                    ₱{{ number_format($totalRevenue, 2) }}
-                </h3>
-                <p class="text-muted mt-3 mb-0">Total earnings</p>
-            </div>
-        </div>
-    </div>
+                <hr>
 
-</div>
-
-<!-- CHARTS -->
-<div class="row mt-4 g-4">
-
-    <!-- REVENUE CHART -->
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <h5 class="fw-bold mb-3">Revenue Trend</h5>
-                <canvas id="revenueChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- RESERVATION CHART -->
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <h5 class="fw-bold mb-3">Reservations Trend</h5>
-                <canvas id="reservationChart"></canvas>
+                <div class="small text-muted">
+                    Generated at:<br>
+                    <strong class="text-dark">{{ $data['generatedAt'] }}</strong>
+                </div>
             </div>
         </div>
     </div>
 
 </div>
 
-<!-- SCRIPT -->
-<script>
-    // Convert PHP → JS safely
-    const revenueLabels = JSON.parse('@json($revenueLabels)');
-    const revenueValues = JSON.parse('@json($revenueValues)');
+<div class="card border-0 rounded-4 shadow-sm">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Business Summary</h5>
 
-    const reservationLabels = JSON.parse('@json($reservationLabels)');
-    const reservationValues = JSON.parse('@json($reservationValues)');
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Category</th>
+                        <th>Metric</th>
+                        <th class="text-center">Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Rooms</td>
+                        <td>Available Rooms</td>
+                        <td class="text-center">{{ $data['availableRooms'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>Rooms</td>
+                        <td>Occupied Rooms</td>
+                        <td class="text-center">{{ $data['occupiedRooms'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>Reservations</td>
+                        <td>Checked In Guests</td>
+                        <td class="text-center">{{ $data['checkedInReservations'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>Reservations</td>
+                        <td>Checked Out Guests</td>
+                        <td class="text-center">{{ $data['checkedOutReservations'] }}</td>
+                    </tr>
+                    <tr>
+                        <td>Payments</td>
+                        <td>Total Revenue</td>
+                        <td class="text-center fw-bold text-success">₱{{ number_format($data['totalRevenue'], 2) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-    // Revenue Chart
-    new Chart(document.getElementById('revenueChart'), {
-        type: 'line',
-        data: {
-            labels: revenueLabels,
-            datasets: [{
-                label: 'Revenue',
-                data: revenueValues,
-                borderColor: '#16a34a',
-                backgroundColor: 'rgba(22,163,74,0.15)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: true }
-            }
-        }
-    });
-
-    // Reservation Chart
-    new Chart(document.getElementById('reservationChart'), {
-        type: 'bar',
-        data: {
-            labels: reservationLabels,
-            datasets: [{
-                label: 'Reservations',
-                data: reservationValues,
-                backgroundColor: '#2563eb'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: true }
-            }
-        }
-    });
-</script>
 @endsection
