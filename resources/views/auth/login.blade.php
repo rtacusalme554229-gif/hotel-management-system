@@ -6,9 +6,11 @@
     <div class="auth-left">
 
         <div class="brand-wrap">
-            <div class="brand-icon">H</div>
+            <div class="brand-icon">
+                <i class="bi bi-building"></i>
+            </div>
             <div class="brand-text">
-                <h3>StayEase Hotelb</h3>
+                <h3>STAYEASE HOTEL</h3>
                 <p>Management System</p>
             </div>
         </div>
@@ -17,7 +19,7 @@
             <div class="auth-title">
                 <h1>Welcome back!</h1>
                 <p>
-                    Sign in to access your dashboard and manage your hotel operations seamlessly.
+                    Sign in to access your dashboard and manage hotel operations seamlessly.
                 </p>
             </div>
 
@@ -27,8 +29,8 @@
                         <i class="bi bi-shield-check"></i>
                     </div>
                     <div>
-                        <h5>Secure & Role-based Access</h5>
-                        <p>Protected login for staff, guests, and admins.</p>
+                        <h5>Secure Role-Based Access</h5>
+                        <p>Protected login for admin, staff, and guests.</p>
                     </div>
                 </div>
 
@@ -38,7 +40,7 @@
                     </div>
                     <div>
                         <h5>Reservation Management</h5>
-                        <p>Manage bookings, check-ins, and more.</p>
+                        <p>Manage bookings, payments, check-ins, and check-outs.</p>
                     </div>
                 </div>
 
@@ -47,8 +49,8 @@
                         <i class="bi bi-bar-chart-line"></i>
                     </div>
                     <div>
-                        <h5>Reports & Insights</h5>
-                        <p>Real-time reports and business analytics.</p>
+                        <h5>Business Reports</h5>
+                        <p>Track operations and revenue through clear reports.</p>
                     </div>
                 </div>
             </div>
@@ -64,7 +66,14 @@
     <div class="auth-right">
         <div class="auth-card">
 
-            <div class="auth-card-logo">H</div>
+            <a href="{{ url('/') }}" class="back-home-link">
+                <i class="bi bi-arrow-left"></i>
+                Back to Home
+            </a>
+
+            <div class="auth-card-logo">
+                <i class="bi bi-building"></i>
+            </div>
 
             <div class="auth-heading">
                 <h2>Sign In</h2>

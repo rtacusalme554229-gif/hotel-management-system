@@ -10,7 +10,11 @@ class RoomController extends Controller
 {
     public function index()
     {
-        $rooms = Room::latest()->get();
+        $rooms = Room::with(['reservations' => function ($query) {
+            $query->whereIn('status', ['pending', 'accepted', 'checked_in'])
+                ->orderBy('check_in_date', 'asc');
+        }])->latest()->get();
+
         return view('rooms.index', compact('rooms'));
     }
 
@@ -75,7 +79,7 @@ class RoomController extends Controller
         $room->update([
             'room_no' => $request->room_no,
             'room_type' => $request->room_type,
-            'floor' => $request->floor,
+            'floor' => $request->price ? $request->floor : $room->floor,
             'price' => $request->price,
             'image' => $imagePath,
         ]);

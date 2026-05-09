@@ -14,4 +14,9 @@ class Room extends Model
         'status',
         'image',
     ];
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
 }

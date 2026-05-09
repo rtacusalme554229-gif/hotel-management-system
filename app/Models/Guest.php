@@ -10,6 +10,7 @@ class Guest extends Model
         'user_id',
         'phone_number',
         'address',
+        'profile_photo',
     ];
 
     public function user()

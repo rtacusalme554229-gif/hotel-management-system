@@ -11,17 +11,11 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Display the login view.
-     */
     public function create(): View
     {
         return view('auth.login');
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
@@ -30,24 +24,43 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
-        if ($user->role === 'admin') {
+        /*
+        |--------------------------------------------------------------------------
+        | Block inactive staff / manager accounts
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $user &&
+            in_array(trim($user->role), ['staff', 'manager']) &&
+            isset($user->status) &&
+            strtolower($user->status) === 'inactive'
+        ) {
+            Auth::logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors([
+                'email' => 'Your staff account is inactive. Please contact the administrator.',
+            ])->onlyInput('email');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redirect based on role
+        |--------------------------------------------------------------------------
+        */
+        if ($user && trim($user->role) === 'admin') {
             return redirect()->intended('/admin/dashboard');
         }
 
-        if (in_array($user->role, ['staff', 'manager'])) {
+        if ($user && in_array(trim($user->role), ['staff', 'manager'])) {
             return redirect()->intended('/staff/dashboard');
         }
 
-        if ($user->role === 'guest') {
-            return redirect()->intended('/guest/dashboard');
-        }
-
-        return redirect('/dashboard');
+        return redirect()->intended('/guest/dashboard');
     }
 
-    /**
-     * Destroy an authenticated session.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
@@ -56,6 +69,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect('/login');
     }
 }

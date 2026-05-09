@@ -2,8 +2,9 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>STAYEASE HOTEL</title>
+    <title>StayEase Hotel</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -66,16 +67,8 @@
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: 26px;
-            position: relative;
-        }
-
-        .brand-icon::before {
-            content: "♛";
-            position: absolute;
-            top: -17px;
-            font-size: 20px;
-            color: #f7d76a;
+            font-size: 24px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.25);
         }
 
         .brand-text h3 {
@@ -174,36 +167,44 @@
             background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 28px;
-            padding: 52px;
+            padding: 44px;
             box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
         }
 
+        .back-home-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 22px;
+            transition: 0.2s ease;
+        }
+
+        .back-home-link:hover {
+            color: #0f172a;
+            transform: translateX(-3px);
+        }
+
         .auth-card-logo {
-            width: 70px;
-            height: 70px;
+            width: 68px;
+            height: 68px;
             border-radius: 50%;
             background: #06224a;
             color: #f4c542;
-            margin: 0 auto 26px;
+            margin: 0 auto 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: 26px;
-            position: relative;
-        }
-
-        .auth-card-logo::before {
-            content: "♛";
-            position: absolute;
-            top: -16px;
-            color: #f4c542;
-            font-size: 18px;
+            font-size: 24px;
         }
 
         .auth-heading {
             text-align: center;
-            margin-bottom: 34px;
+            margin-bottom: 30px;
         }
 
         .auth-heading h2 {
@@ -247,7 +248,7 @@
             border-radius: 12px;
             border: 1px solid #cbd5e1;
             padding-left: 52px;
-            padding-right: 52px;
+            padding-right: 70px;
             font-size: 15px;
             outline: none;
             transition: 0.2s ease;
@@ -317,18 +318,6 @@
             color: #64748b;
         }
 
-        .two-cols {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 18px;
-        }
-
-        .terms {
-            margin: 18px 0 24px;
-            font-size: 14px;
-            color: #64748b;
-        }
-
         @media (max-width: 992px) {
             .auth-page {
                 grid-template-columns: 1fr;
@@ -344,11 +333,7 @@
             }
 
             .auth-card {
-                padding: 32px;
-            }
-
-            .two-cols {
-                grid-template-columns: 1fr;
+                padding: 30px;
             }
         }
     </style>

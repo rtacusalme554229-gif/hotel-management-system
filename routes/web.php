@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\GuestController;
+use App\Http\Controllers\GuestProfileController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReservationController;
@@ -12,10 +13,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Public Landing Page
+|--------------------------------------------------------------------------
+*/
 Route::get('/', function () {
     return view('welcome');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Dashboard Redirect
+|--------------------------------------------------------------------------
+*/
 Route::get('/dashboard', function () {
     $user = Auth::user();
 
@@ -36,11 +47,33 @@ Route::get('/dashboard', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'admin'])->group(function () {
+
     Route::get('/admin/dashboard', function () {
+        $today = Carbon::now('Asia/Manila')->toDateString();
+
         $totalRooms = \App\Models\Room::count();
-        $availableRooms = \App\Models\Room::where('status', 'available')->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Date-Based Room Logic
+        |--------------------------------------------------------------------------
+        | Reserved rooms can still be booked for other non-overlapping dates.
+        | Only checked-in rooms are counted as occupied today.
+        */
+        $occupiedToday = \App\Models\Reservation::where('status', 'checked_in')->count();
+        $bookableRooms = max($totalRooms - $occupiedToday, 0);
+
         $totalGuests = \App\Models\Guest::count();
         $totalReservations = \App\Models\Reservation::count();
+
+        $pendingReservations = \App\Models\Reservation::where('status', 'pending')->count();
+
+        $upcomingReservations = \App\Models\Reservation::whereIn('status', ['pending', 'accepted'])
+            ->whereDate('check_in_date', '>=', $today)
+            ->count();
+
+        $activeStays = \App\Models\Reservation::where('status', 'checked_in')->count();
+
         $totalPayments = \App\Models\Payment::count();
         $totalRevenue = \App\Models\Payment::sum('amount');
 
@@ -49,40 +82,94 @@ Route::middleware(['auth', 'admin'])->group(function () {
             ->take(5)
             ->get();
 
-        $recentReservations = \App\Models\Reservation::with(['guest.user', 'room', 'payment'])
-            ->latest()
-            ->take(5)
+        $revenueChart = \App\Models\Payment::selectRaw('DATE(created_at) as date, SUM(amount) as total')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->take(7)
+            ->get();
+
+        $reservationChart = \App\Models\Reservation::selectRaw('DATE(created_at) as date, COUNT(*) as total')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->take(7)
             ->get();
 
         return view('admin.dashboard', compact(
             'totalRooms',
-            'availableRooms',
+            'bookableRooms',
+            'occupiedToday',
             'totalGuests',
             'totalReservations',
+            'pendingReservations',
+            'upcomingReservations',
+            'activeStays',
             'totalPayments',
             'totalRevenue',
             'recentPayments',
-            'recentReservations'
+            'revenueChart',
+            'reservationChart'
         ));
     })->name('admin.dashboard');
 
-    Route::get('/guests', [GuestController::class, 'index'])->name('guests.index');
-    Route::get('/guests/{guest}/edit', [GuestController::class, 'edit'])->name('guests.edit');
-    Route::put('/guests/{guest}', [GuestController::class, 'update'])->name('guests.update');
-    Route::delete('/guests/{guest}', [GuestController::class, 'destroy'])->name('guests.destroy');
+    /*
+    |--------------------------------------------------------------------------
+    | Guest Management
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/guests', [GuestController::class, 'index'])
+        ->name('guests.index');
 
-    Route::get('/rooms/create', [RoomController::class, 'create'])->name('rooms.create');
-    Route::post('/rooms', [RoomController::class, 'store'])->name('rooms.store');
-    Route::get('/rooms/{room}/edit', [RoomController::class, 'edit'])->name('rooms.edit');
-    Route::put('/rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
-    Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
+    Route::get('/guests/{guest}/edit', [GuestController::class, 'edit'])
+        ->name('guests.edit');
 
-    Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
-    Route::get('/staff/create', [StaffController::class, 'create'])->name('staff.create');
-    Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
-    Route::get('/staff/{staff}/edit', [StaffController::class, 'edit'])->name('staff.edit');
-    Route::put('/staff/{staff}', [StaffController::class, 'update'])->name('staff.update');
-    Route::delete('/staff/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
+    Route::put('/guests/{guest}', [GuestController::class, 'update'])
+        ->name('guests.update');
+
+    Route::delete('/guests/{guest}', [GuestController::class, 'destroy'])
+        ->name('guests.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Room Management
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/rooms/create', [RoomController::class, 'create'])
+        ->name('rooms.create');
+
+    Route::post('/rooms', [RoomController::class, 'store'])
+        ->name('rooms.store');
+
+    Route::get('/rooms/{room}/edit', [RoomController::class, 'edit'])
+        ->name('rooms.edit');
+
+    Route::put('/rooms/{room}', [RoomController::class, 'update'])
+        ->name('rooms.update');
+
+    Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])
+        ->name('rooms.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Staff Management
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/staff', [StaffController::class, 'index'])
+        ->name('staff.index');
+
+    Route::get('/staff/create', [StaffController::class, 'create'])
+        ->name('staff.create');
+
+    Route::post('/staff', [StaffController::class, 'store'])
+        ->name('staff.store');
+
+    Route::get('/staff/{staff}/edit', [StaffController::class, 'edit'])
+        ->name('staff.edit');
+
+    Route::put('/staff/{staff}', [StaffController::class, 'update'])
+        ->name('staff.update');
+
+    Route::delete('/staff/{staff}', [StaffController::class, 'destroy'])
+        ->name('staff.destroy');
 });
 
 /*
@@ -91,36 +178,70 @@ Route::middleware(['auth', 'admin'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'staff'])->group(function () {
+
     Route::get('/staff/dashboard', function () {
-        $today = Carbon::today();
+        $today = Carbon::now('Asia/Manila')->toDateString();
 
         $totalRooms = \App\Models\Room::count();
-        $availableRooms = \App\Models\Room::where('status', 'available')->count();
-        $occupiedRooms = \App\Models\Room::where('status', 'occupied')->count();
-        $reservedRooms = \App\Models\Room::where('status', 'reserved')->count();
 
-        $totalReservations = \App\Models\Reservation::count();
-        $todayReservations = \App\Models\Reservation::whereDate('created_at', $today)->count();
-        $pendingReservations = \App\Models\Reservation::where('status', 'pending')->count();
+        $activeStays = \App\Models\Reservation::where('status', 'checked_in')->count();
+        $bookableRooms = max($totalRooms - $activeStays, 0);
 
-        $todayCheckIns = \App\Models\Reservation::whereDate('checked_in_at', $today)->count();
-        $todayCheckOuts = \App\Models\Reservation::whereDate('checked_out_at', $today)->count();
+        $todayCheckIns = \App\Models\Reservation::whereDate('check_in_date', $today)
+            ->whereIn('status', ['accepted', 'checked_in'])
+            ->count();
 
-        $todayPayments = \App\Models\Payment::whereDate('created_at', $today)->count();
-        $todayRevenue = \App\Models\Payment::whereDate('created_at', $today)->sum('amount');
+        $todayCheckOuts = \App\Models\Reservation::whereDate('check_out_date', $today)
+            ->whereIn('status', ['checked_in', 'checked_out'])
+            ->count();
+
+        $completedCheckIns = \App\Models\Reservation::whereDate('checked_in_at', $today)
+            ->count();
+
+        $completedCheckOuts = \App\Models\Reservation::whereDate('checked_out_at', $today)
+            ->count();
+
+        $pendingReservations = \App\Models\Reservation::where('status', 'pending')
+            ->count();
+
+        $upcomingReservations = \App\Models\Reservation::whereIn('status', ['pending', 'accepted'])
+            ->whereDate('check_in_date', '>=', $today)
+            ->count();
+
+        $todayPayments = \App\Models\Payment::whereDate('created_at', $today)
+            ->count();
+
+        $todayRevenue = \App\Models\Payment::whereDate('created_at', $today)
+            ->sum('amount');
+
+        $todayArrivals = \App\Models\Reservation::with(['guest.user', 'room', 'payment'])
+            ->whereDate('check_in_date', $today)
+            ->whereIn('status', ['accepted', 'checked_in'])
+            ->latest()
+            ->take(6)
+            ->get();
+
+        $todayDepartures = \App\Models\Reservation::with(['guest.user', 'room', 'payment'])
+            ->whereDate('check_out_date', $today)
+            ->whereIn('status', ['checked_in', 'checked_out'])
+            ->latest()
+            ->take(6)
+            ->get();
 
         return view('staff.dashboard', compact(
             'totalRooms',
-            'availableRooms',
-            'occupiedRooms',
-            'reservedRooms',
-            'totalReservations',
-            'todayReservations',
-            'pendingReservations',
+            'bookableRooms',
+            'activeStays',
             'todayCheckIns',
             'todayCheckOuts',
+            'completedCheckIns',
+            'completedCheckOuts',
+            'pendingReservations',
+            'upcomingReservations',
             'todayPayments',
-            'todayRevenue'
+            'todayRevenue',
+            'todayArrivals',
+            'todayDepartures'
         ));
     })->name('staff.dashboard');
 
@@ -130,10 +251,14 @@ Route::middleware(['auth', 'staff'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Reservation Management for Admin + Staff / Manager
+| Reservation Management
+|--------------------------------------------------------------------------
+| Admin can approve/decline.
+| Staff/Manager can check in/check out.
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
+
     Route::get('/reservations', function (Request $request) {
         $user = Auth::user();
 
@@ -191,6 +316,7 @@ Route::middleware(['auth'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
+
     Route::get('/payments', function () {
         $user = Auth::user();
 
@@ -208,6 +334,7 @@ Route::middleware(['auth'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
+
     Route::get('/reports', function (Request $request) {
         $user = Auth::user();
 
@@ -235,16 +362,21 @@ Route::middleware(['auth'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'guest.role'])->group(function () {
+
     Route::get('/guest/dashboard', function () {
         $guest = \App\Models\Guest::firstOrCreate(
             ['user_id' => Auth::id()],
             [
                 'phone_number' => null,
                 'address' => null,
+                'profile_photo' => null,
             ]
         );
 
-        $totalReservations = \App\Models\Reservation::where('guest_id', $guest->id)->count();
+        $today = Carbon::now('Asia/Manila')->toDateString();
+
+        $totalReservations = \App\Models\Reservation::where('guest_id', $guest->id)
+            ->count();
 
         $approvedReservations = \App\Models\Reservation::where('guest_id', $guest->id)
             ->where('status', 'accepted')
@@ -254,19 +386,73 @@ Route::middleware(['auth', 'guest.role'])->group(function () {
             $query->where('guest_id', $guest->id);
         })->count();
 
-        $latestReservation = \App\Models\Reservation::with('room')
+        $pendingReservations = \App\Models\Reservation::where('guest_id', $guest->id)
+            ->where('status', 'pending')
+            ->count();
+
+        $activeStay = \App\Models\Reservation::with(['room', 'payment'])
+            ->where('guest_id', $guest->id)
+            ->where('status', 'checked_in')
+            ->latest()
+            ->first();
+
+        $upcomingReservation = \App\Models\Reservation::with(['room', 'payment'])
+            ->where('guest_id', $guest->id)
+            ->whereIn('status', ['pending', 'accepted'])
+            ->whereDate('check_in_date', '>=', $today)
+            ->orderBy('check_in_date', 'asc')
+            ->first();
+
+        $latestReservation = \App\Models\Reservation::with(['room', 'payment'])
             ->where('guest_id', $guest->id)
             ->latest()
             ->first();
 
+        $recentReservations = \App\Models\Reservation::with(['room', 'payment'])
+            ->where('guest_id', $guest->id)
+            ->latest()
+            ->take(5)
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Guest Dashboard Room Logic
+        |--------------------------------------------------------------------------
+        | This count shows total rooms available for date selection.
+        | ReservationController blocks only overlapping dates.
+        */
+        $bookableRooms = \App\Models\Room::count();
+
         return view('guest.dashboard', compact(
+            'guest',
             'totalReservations',
             'approvedReservations',
             'paidReservations',
-            'latestReservation'
+            'pendingReservations',
+            'activeStay',
+            'upcomingReservation',
+            'latestReservation',
+            'recentReservations',
+            'bookableRooms'
         ));
     })->name('guest.dashboard');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Guest Profile
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/guest/profile/edit', [GuestProfileController::class, 'edit'])
+        ->name('guest.profile.edit');
+
+    Route::put('/guest/profile/update', [GuestProfileController::class, 'update'])
+        ->name('guest.profile.update');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Guest Reservations / Payments
+    |--------------------------------------------------------------------------
+    */
     Route::get('/reserve/{room}', [ReservationController::class, 'create'])
         ->name('reservations.create');
 
@@ -292,6 +478,7 @@ Route::middleware(['auth', 'guest.role'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
+
     Route::get('/rooms', [RoomController::class, 'index'])
         ->name('rooms.index');
 
@@ -307,10 +494,16 @@ Route::middleware(['auth'])->group(function () {
 */
 Route::get('/force-logout', function () {
     Auth::logout();
+
     request()->session()->invalidate();
     request()->session()->regenerateToken();
 
     return redirect('/login');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Authentication Routes
+|--------------------------------------------------------------------------
+*/
 require __DIR__ . '/auth.php';
