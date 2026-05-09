@@ -52,17 +52,27 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Install frontend dependencies and build assets
 RUN npm install && npm run build
 
-# Clear Laravel caches
-RUN php artisan config:clear \
-    && php artisan route:clear \
-    && php artisan view:clear
+# Create needed Laravel folders before clearing cache
+RUN mkdir -p \
+    storage/framework/cache \
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    bootstrap/cache \
+    public/uploads
+
+# Clear Laravel caches safely
+RUN php artisan optimize:clear || true
+RUN php artisan config:clear || true
+RUN php artisan cache:clear || true
+RUN php artisan route:clear || true
+RUN php artisan view:clear || true
 
 # Create storage symlink
 RUN php artisan storage:link || true
 
 # Fix permissions
-RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache public/uploads \
-    && chown -R www-data:www-data storage bootstrap/cache public/uploads \
+RUN chown -R www-data:www-data storage bootstrap/cache public/uploads \
     && chmod -R 775 storage bootstrap/cache public/uploads
 
 # Expose Render port
