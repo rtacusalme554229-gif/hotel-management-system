@@ -24,7 +24,7 @@
 <div class="mb-4">
     <h2 class="fw-bold text-dark mb-1">Admin Dashboard</h2>
     <p class="text-muted mb-0">
-        StayEase Hotel operations overview based on date-based reservation logic.
+        Pinnacle Hotel and Suites  operations overview based on date-based reservation logic.
     </p>
 </div>
 

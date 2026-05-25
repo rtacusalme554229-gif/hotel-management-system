@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StayEase Hotel</title>
+<title>Pinnacle Hotel and Suites </title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -73,7 +73,7 @@ footer a:hover{color:var(--gold)}
 <body>
 
 <nav>
-  <div class="logo">StayEase</div>
+  <div class="logo">Pinnacle Hotel and Suites </div>
   <div>
     @auth
       <a href="{{ route('dashboard') }}">Dashboard</a>
@@ -128,7 +128,7 @@ footer a:hover{color:var(--gold)}
 </div>
 
 <footer>
-  <p>&copy; 2025 StayEase Hotel MS</p>
+  <p>&copy; 2025 Pinnacle Hotel and Suites </p>
   <div>
     <a href="#">Privacy</a>
     <a href="#">Terms</a>

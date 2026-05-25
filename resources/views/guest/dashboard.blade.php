@@ -168,7 +168,7 @@
                         <i class="bi bi-calendar-plus"></i>
                     </div>
                     <h5>No upcoming reservation yet</h5>
-                    <p>Browse rooms and create your next booking at StayEase Hotel.</p>
+                    <p>Browse rooms and create your next booking at Pinnacle Hotel and Suites .</p>
                     <a href="{{ route('rooms.index') }}" class="btn btn-dark rounded-3 px-4">
                         Browse Rooms
                     </a>

@@ -1,6 +1,6 @@
 <nav class="top-navbar">
     <div>
-        <h5 class="navbar-title mb-0">StayEase Hotel</h5>
+        <h5 class="navbar-title mb-0">Pinnacle Hotel and Suites </h5>
         <small class="navbar-subtitle">Professional booking and operations dashboard</small>
     </div>
 

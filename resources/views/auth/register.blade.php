@@ -10,7 +10,7 @@
                 <i class="bi bi-building"></i>
             </div>
             <div class="brand-text">
-                <h3>STAYEASE HOTEL</h3>
+                <h3>Pinnacle Hotel and Suites </h3>
                 <p>Management System</p>
             </div>
         </div>
